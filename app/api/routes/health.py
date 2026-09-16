@@ -1,0 +1,18 @@
+from fastapi import APIRouter
+
+from app.core.config import get_settings
+
+router = APIRouter(tags=["health"])
+
+
+@router.get(
+    "/health",
+)
+async def health() -> dict[str, str]:
+    settings = get_settings()
+
+    return {
+        "status": "ok",
+        "environment": settings.app_env,
+        "llm_provider": settings.llm_provider,
+    }
