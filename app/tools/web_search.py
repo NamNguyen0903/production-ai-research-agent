@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 from pydantic import ValidationError
@@ -7,13 +7,30 @@ from app.models.evidence import Evidence
 from app.tools.base import ToolExecutionError
 
 
+class SearchCacheProtocol(Protocol):
+    async def get(
+        self,
+        query: str,
+        max_results: int,
+    ) -> list[Evidence] | None: ...
+
+    async def set(
+        self,
+        query: str,
+        max_results: int,
+        evidence: list[Evidence],
+    ) -> None: ...
+
+
 class WebSearchTool:
     def __init__(
         self,
         api_key: str,
         timeout_seconds: float = 15.0,
+        cache: SearchCacheProtocol | None = None,
     ) -> None:
         self._api_key = api_key
+        self._cache = cache
 
         self._client = httpx.AsyncClient(
             base_url="https://api.tavily.com",
@@ -26,10 +43,30 @@ class WebSearchTool:
         research_step_id: str,
         max_results: int = 4,
     ) -> list[Evidence]:
+        if self._cache is not None:
+            cached = await self._cache.get(
+                query,
+                max_results,
+            )
+
+            if cached is not None:
+                return [
+                    item.model_copy(
+                        update={
+                            "source_id": (f"raw-{research_step_id}-{index}"),
+                            "research_step_id": (research_step_id),
+                        }
+                    )
+                    for index, item in enumerate(
+                        cached,
+                        start=1,
+                    )
+                ]
+
         try:
             response = await self._client.post(
                 "/search",
-                headers={"Authorization": f"Bearer {self._api_key}"},
+                headers={"Authorization": (f"Bearer {self._api_key}")},
                 json={
                     "query": query,
                     "search_depth": "basic",
@@ -69,6 +106,13 @@ class WebSearchTool:
                         relevance_score=item.get("score"),
                         published_date=item.get("published_date"),
                     )
+                )
+
+            if self._cache is not None:
+                await self._cache.set(
+                    query,
+                    max_results,
+                    evidence,
                 )
 
             return evidence

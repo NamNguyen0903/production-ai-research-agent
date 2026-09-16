@@ -47,6 +47,16 @@ class Settings(BaseSettings):
         ge=5,
     )
 
+    postgres_uri: str = (
+        "postgresql://research:research@localhost:5433/research_agent?sslmode=disable"
+    )
+
+    redis_url: str = "redis://localhost:6380/0"
+
+    redis_cache_ttl_seconds: int = 900
+
+    langfuse_enabled: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

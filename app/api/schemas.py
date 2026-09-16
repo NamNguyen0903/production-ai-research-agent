@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -27,6 +28,8 @@ class ResearchMetrics(BaseModel):
 
     sources_found: int
 
+    latency_ms: int
+
 
 class ResearchResponse(BaseModel):
     run_id: str
@@ -44,3 +47,31 @@ class ResearchResponse(BaseModel):
     verification: VerificationResult | None
 
     metrics: ResearchMetrics
+
+
+class ResearchRunResponse(BaseModel):
+    run_id: str
+
+    query: str
+
+    status: Literal[
+        "running",
+        "completed",
+        "failed",
+    ]
+
+    started_at: datetime
+
+    completed_at: datetime | None = None
+
+    latency_ms: int | None = None
+
+    tool_calls: int
+
+    iterations: int
+
+    sources_found: int
+
+    verification_score: float | None = None
+
+    error: str | None = None

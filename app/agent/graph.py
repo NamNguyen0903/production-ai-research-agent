@@ -13,6 +13,7 @@ def build_research_graph(
     evidence_processor_node: Callable[..., Any],
     synthesizer_node: Callable[..., Any],
     verifier_node: Callable[..., Any],
+    checkpointer: Any | None = None,
 ):
     builder = StateGraph(ResearchState)
 
@@ -75,4 +76,4 @@ def build_research_graph(
         },
     )
 
-    return builder.compile()
+    return builder.compile(checkpointer=checkpointer)

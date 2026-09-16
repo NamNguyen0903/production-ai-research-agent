@@ -4,13 +4,13 @@ from fastapi import (
     APIRouter,
     HTTPException,
     Request,
-    status,
 )
 
 from app.api.schemas import (
     ResearchMetrics,
     ResearchRequest,
     ResearchResponse,
+    ResearchRunResponse,
 )
 from app.core.config import get_settings
 
@@ -28,16 +28,16 @@ async def create_research(
     payload: ResearchRequest,
     request: Request,
 ) -> ResearchResponse:
-    graph = getattr(
+    service = getattr(
         request.app.state,
-        "research_graph",
+        "research_service",
         None,
     )
 
-    if graph is None:
+    if service is None:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Research graph is not initialized.",
+            status_code=503,
+            detail=("Research service is not initialized."),
         )
 
     settings = get_settings()
@@ -61,9 +61,9 @@ async def create_research(
         "final_answer": None,
     }
 
-    result = await graph.ainvoke(
-        initial_state,
-        config={"recursion_limit": (settings.graph_recursion_limit)},
+    result = await service.run(
+        run_id=run_id,
+        initial_state=initial_state,
     )
 
     evidence = result.get(
@@ -92,5 +92,45 @@ async def create_research(
                 0,
             ),
             sources_found=len(evidence),
+            latency_ms=result.get(
+                "_latency_ms",
+                0,
+            ),
         ),
+    )
+
+
+@router.get(
+    "/{run_id}",
+    response_model=ResearchRunResponse,
+)
+async def get_research_run(
+    run_id: str,
+    request: Request,
+) -> ResearchRunResponse:
+    repository = getattr(
+        request.app.state,
+        "run_repository",
+        None,
+    )
+
+    if repository is None:
+        raise HTTPException(
+            status_code=503,
+            detail=("Run persistence is not available."),
+        )
+
+    run = await repository.get_run(run_id)
+
+    if run is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Research run not found.",
+        )
+
+    return ResearchRunResponse(
+        **{
+            **run,
+            "run_id": str(run["run_id"]),
+        }
     )
