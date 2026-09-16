@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     max_research_steps: int = 5
     max_iterations: int = 2
 
+    tavily_api_key: SecretStr | None = None
+
+    max_search_results: int = 4
+    max_sources: int = 12
+    search_timeout_seconds: float = 15.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

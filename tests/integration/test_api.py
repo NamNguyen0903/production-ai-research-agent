@@ -1,12 +1,26 @@
 from fastapi.testclient import TestClient
 
 from app.agent.graph import build_research_graph
+from app.agent.nodes.evidence_processor import (
+    create_evidence_processor_node,
+)
 from app.agent.nodes.planner import mock_planner_node
+from app.agent.nodes.researcher import (
+    mock_researcher_node,
+)
+from app.agent.nodes.synthesizer import (
+    mock_synthesizer_node,
+)
 from app.main import create_app
 
 
 def create_test_client() -> TestClient:
-    graph = build_research_graph(mock_planner_node)
+    graph = build_research_graph(
+        planner_node=mock_planner_node,
+        researcher_node=mock_researcher_node,
+        evidence_processor_node=(create_evidence_processor_node(max_sources=12)),
+        synthesizer_node=(mock_synthesizer_node),
+    )
 
     app = create_app(graph=graph)
 

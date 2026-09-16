@@ -1,8 +1,18 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
 class Evidence(BaseModel):
     source_id: str
+
+    research_step_id: str
+
+    source_type: Literal[
+        "web",
+        "document",
+        "api",
+    ] = "web"
 
     title: str
 
@@ -15,3 +25,5 @@ class Evidence(BaseModel):
         ge=0,
         le=1,
     )
+
+    published_date: str | None = None

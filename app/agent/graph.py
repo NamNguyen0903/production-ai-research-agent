@@ -3,26 +3,16 @@ from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
-from app.agent.nodes.evidence_processor import (
-    evidence_processor_node,
-)
-from app.agent.nodes.researcher import (
-    researcher_node,
-)
-from app.agent.nodes.synthesizer import (
-    synthesizer_node,
-)
-from app.agent.nodes.verifier import (
-    verifier_node,
-)
-from app.agent.routing import (
-    route_after_verification,
-)
+from app.agent.nodes.verifier import verifier_node
+from app.agent.routing import route_after_verification
 from app.agent.state import ResearchState
 
 
 def build_research_graph(
     planner_node: Callable[..., Any],
+    researcher_node: Callable[..., Any],
+    evidence_processor_node: Callable[..., Any],
+    synthesizer_node: Callable[..., Any],
 ):
     builder = StateGraph(ResearchState)
 

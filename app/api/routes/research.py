@@ -46,6 +46,7 @@ async def create_research(
 
     initial_state = {
         "run_id": run_id,
+        "used_source_ids": [],
         "query": payload.query,
         "plan": [],
         "evidence": [],
