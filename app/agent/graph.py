@@ -3,7 +3,6 @@ from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
-from app.agent.nodes.verifier import verifier_node
 from app.agent.routing import route_after_verification
 from app.agent.state import ResearchState
 
@@ -13,6 +12,7 @@ def build_research_graph(
     researcher_node: Callable[..., Any],
     evidence_processor_node: Callable[..., Any],
     synthesizer_node: Callable[..., Any],
+    verifier_node: Callable[..., Any],
 ):
     builder = StateGraph(ResearchState)
 

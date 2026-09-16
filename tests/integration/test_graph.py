@@ -11,6 +11,7 @@ from app.agent.nodes.researcher import (
 from app.agent.nodes.synthesizer import (
     mock_synthesizer_node,
 )
+from app.agent.nodes.verifier import mock_verifier_node
 
 
 @pytest.mark.asyncio
@@ -18,8 +19,9 @@ async def test_research_graph_runs_end_to_end():
     graph = build_research_graph(
         planner_node=mock_planner_node,
         researcher_node=mock_researcher_node,
-        evidence_processor_node=(create_evidence_processor_node(max_sources=12)),
-        synthesizer_node=(mock_synthesizer_node),
+        evidence_processor_node=create_evidence_processor_node(max_sources=12),
+        synthesizer_node=mock_synthesizer_node,
+        verifier_node=mock_verifier_node,
     )
 
     result = await graph.ainvoke(

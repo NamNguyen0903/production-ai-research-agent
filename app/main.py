@@ -21,6 +21,10 @@ from app.agent.nodes.synthesizer import (
     create_synthesizer_node,
     mock_synthesizer_node,
 )
+from app.agent.nodes.verifier import (
+    create_verifier_node,
+    mock_verifier_node,
+)
 from app.api.routes.health import (
     router as health_router,
 )
@@ -52,12 +56,13 @@ def create_app(
 
         elif settings.llm_provider == "mock":
             app.state.research_graph = build_research_graph(
-                planner_node=(mock_planner_node),
-                researcher_node=(mock_researcher_node),
+                planner_node=mock_planner_node,
+                researcher_node=mock_researcher_node,
                 evidence_processor_node=(
                     create_evidence_processor_node(max_sources=(settings.max_sources))
                 ),
                 synthesizer_node=(mock_synthesizer_node),
+                verifier_node=mock_verifier_node,
             )
 
         else:
@@ -77,8 +82,9 @@ def create_app(
             )
 
             researcher_node = create_researcher_node(
-                search_tool=(web_search_tool),
+                search_tool=web_search_tool,
                 max_results=(settings.max_search_results),
+                max_tool_calls=(settings.max_tool_calls),
             )
 
             evidence_processor_node = create_evidence_processor_node(
@@ -87,11 +93,18 @@ def create_app(
 
             synthesizer_node = create_synthesizer_node(llm=llm)
 
+            verifier_node = create_verifier_node(
+                llm=llm,
+                min_coverage=settings.verification_min_coverage,
+                max_targeted_queries=settings.max_targeted_queries,
+            )
+
             app.state.research_graph = build_research_graph(
                 planner_node=planner_node,
-                researcher_node=(researcher_node),
-                evidence_processor_node=(evidence_processor_node),
-                synthesizer_node=(synthesizer_node),
+                researcher_node=researcher_node,
+                evidence_processor_node=evidence_processor_node,
+                synthesizer_node=synthesizer_node,
+                verifier_node=verifier_node,
             )
 
         yield

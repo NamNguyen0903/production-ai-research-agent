@@ -17,10 +17,13 @@ class ResearchState(TypedDict, total=False):
 
     verification: VerificationResult | None
 
+    retry_queries: list[str]
+
     iteration: int
     max_iterations: int
 
     tool_calls: int
+    max_tool_calls: int
 
     errors: list[str]
 

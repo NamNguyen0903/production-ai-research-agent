@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +24,28 @@ class Settings(BaseSettings):
     max_search_results: int = 4
     max_sources: int = 12
     search_timeout_seconds: float = 15.0
+
+    verification_min_coverage: float = Field(
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+    )
+
+    max_targeted_queries: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+    )
+
+    max_tool_calls: int = Field(
+        default=15,
+        ge=1,
+    )
+
+    graph_recursion_limit: int = Field(
+        default=25,
+        ge=5,
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

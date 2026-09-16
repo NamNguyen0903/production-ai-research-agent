@@ -55,11 +55,16 @@ async def create_research(
         "iteration": 0,
         "max_iterations": (payload.max_iterations or settings.max_iterations),
         "tool_calls": 0,
+        "retry_queries": [],
+        "max_tool_calls": (settings.max_tool_calls),
         "errors": [],
         "final_answer": None,
     }
 
-    result = await graph.ainvoke(initial_state)
+    result = await graph.ainvoke(
+        initial_state,
+        config={"recursion_limit": (settings.graph_recursion_limit)},
+    )
 
     evidence = result.get(
         "evidence",
