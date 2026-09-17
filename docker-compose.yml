@@ -2,14 +2,18 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: research-agent-postgres
+
     environment:
       POSTGRES_DB: research_agent
       POSTGRES_USER: research
       POSTGRES_PASSWORD: research
+
     ports:
       - "5433:5432"
+
     volumes:
       - research_agent_postgres_data:/var/lib/postgresql/data
+
     healthcheck:
       test:
         [
@@ -23,10 +27,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: research-agent-redis
+
     ports:
       - "6380:6379"
+
     volumes:
       - research_agent_redis_data:/data
+
     healthcheck:
       test:
         [
@@ -37,6 +44,50 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    build:
+      context: .
+
+    container_name: research-agent-api
+
+    env_file:
+      - .env
+
+    environment:
+      APP_ENV: production
+
+      POSTGRES_URI: >-
+        postgresql://research:research@postgres:5432/research_agent?sslmode=disable
+
+      REDIS_URL: >-
+        redis://redis:6379/0
+
+    ports:
+      - "8001:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    restart: unless-stopped
+
 
 volumes:
   research_agent_postgres_data:

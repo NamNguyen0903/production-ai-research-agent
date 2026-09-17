@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     redis_cache_ttl_seconds: int = 900
 
     langfuse_enabled: bool = False
+    langfuse_public_key: SecretStr | None = None
+    langfuse_secret_key: SecretStr | None = None
+    langfuse_base_url: str = "https://cloud.langfuse.com"
+    langfuse_tracing_environment: str = "development"
 
     model_config = SettingsConfigDict(
         env_file=".env",

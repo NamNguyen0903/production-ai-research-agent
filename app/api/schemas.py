@@ -30,6 +30,8 @@ class ResearchMetrics(BaseModel):
 
     latency_ms: int
 
+    errors_count: int
+
 
 class ResearchResponse(BaseModel):
     run_id: str

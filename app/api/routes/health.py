@@ -1,11 +1,25 @@
+from typing import Any
+
 from fastapi import (
     APIRouter,
     HTTPException,
     Request,
     status,
 )
+from psycopg import Error as PsycopgError
+from psycopg_pool import PoolClosed, PoolTimeout
 
 router = APIRouter(tags=["health"])
+
+
+async def _dependency_is_ready(dependency: Any) -> bool:
+    if dependency is None:
+        return False
+
+    try:
+        return bool(await dependency.ping())
+    except (PsycopgError, PoolClosed, PoolTimeout):
+        return False
 
 
 @router.get("/health")
@@ -31,9 +45,9 @@ async def ready(
         None,
     )
 
-    postgres_ok = await repository.ping() if repository is not None else False
+    postgres_ok = await _dependency_is_ready(repository)
 
-    redis_ok = await cache.ping() if cache is not None else False
+    redis_ok = await _dependency_is_ready(cache)
 
     ready_state = postgres_ok and redis_ok
 

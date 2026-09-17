@@ -40,6 +40,21 @@ def test_health_endpoint():
     assert body["status"] == "ok"
 
 
+def test_ready_endpoint_reports_unavailable_dependencies():
+    with create_test_client() as client:
+        response = client.get("/ready")
+
+    assert response.status_code == 503
+
+    body = response.json()
+
+    assert body["detail"] == {
+        "status": "not_ready",
+        "postgres": False,
+        "redis": False,
+    }
+
+
 def test_research_endpoint():
     with create_test_client() as client:
         response = client.post(

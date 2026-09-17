@@ -1,9 +1,14 @@
 import hashlib
 import json
+import logging
 
+from pydantic import ValidationError
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from app.models.evidence import Evidence
+
+logger = logging.getLogger(__name__)
 
 
 class SearchCache:
@@ -38,14 +43,27 @@ class SearchCache:
             max_results,
         )
 
-        value = await self._redis.get(key)
+        try:
+            value = await self._redis.get(key)
+        except RedisError:
+            logger.warning(
+                "Redis cache read failed; continuing with a cache miss.",
+                exc_info=True,
+            )
+            return None
 
         if value is None:
             return None
 
-        payload = json.loads(value)
-
-        return [Evidence.model_validate(item) for item in payload]
+        try:
+            payload = json.loads(value)
+            return [Evidence.model_validate(item) for item in payload]
+        except (json.JSONDecodeError, TypeError, ValidationError):
+            logger.warning(
+                "Redis cache entry was invalid; continuing with a cache miss.",
+                exc_info=True,
+            )
+            return None
 
     async def set(
         self,
@@ -60,11 +78,20 @@ class SearchCache:
 
         payload = [item.model_dump(mode="json") for item in evidence]
 
-        await self._redis.set(
-            key,
-            json.dumps(payload),
-            ex=self._ttl_seconds,
-        )
+        try:
+            await self._redis.set(
+                key,
+                json.dumps(payload),
+                ex=self._ttl_seconds,
+            )
+        except RedisError:
+            logger.warning(
+                "Redis cache write failed; returning uncached search results.",
+                exc_info=True,
+            )
 
     async def ping(self) -> bool:
-        return bool(await self._redis.ping())
+        try:
+            return bool(await self._redis.ping())
+        except RedisError:
+            return False

@@ -1,7 +1,7 @@
 [project]
 name = "production-ai-research-agent"
-version = "0.1.0"
-description = "Add your description here"
+version = "1.0.0"
+description = "Evidence-grounded AI research agent with verification and bounded retries"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

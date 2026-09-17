@@ -96,6 +96,12 @@ async def create_research(
                 "_latency_ms",
                 0,
             ),
+            errors_count=len(
+                result.get(
+                    "errors",
+                    [],
+                )
+            ),
         ),
     )
 

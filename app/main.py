@@ -3,6 +3,7 @@ from typing import Any
 
 import redis.asyncio as redis
 from fastapi import FastAPI
+from langfuse import Langfuse
 from langgraph.checkpoint.postgres.aio import (
     AsyncPostgresSaver,
 )
@@ -55,6 +56,7 @@ def create_app(
         redis_client = None
         web_search_tool = None
         checkpointer_context = None
+        langfuse_client = None
 
         # Used by integration tests that inject
         # their own graph.
@@ -99,6 +101,38 @@ def create_app(
             )
 
             app.state.search_cache = search_cache
+
+            if settings.langfuse_enabled:
+                if (
+                    settings.langfuse_public_key is None
+                    or settings.langfuse_secret_key is None
+                ):
+                    raise RuntimeError(
+                        "LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY are required "
+                        "when LANGFUSE_ENABLED=true."
+                    )
+
+                langfuse_public_key = (
+                    settings.langfuse_public_key.get_secret_value().strip()
+                )
+                langfuse_secret_key = (
+                    settings.langfuse_secret_key.get_secret_value().strip()
+                )
+
+                if not langfuse_public_key or not langfuse_secret_key:
+                    raise RuntimeError(
+                        "LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY cannot be "
+                        "blank when LANGFUSE_ENABLED=true."
+                    )
+
+                langfuse_client = Langfuse(
+                    public_key=langfuse_public_key,
+                    secret_key=langfuse_secret_key,
+                    base_url=settings.langfuse_base_url,
+                    environment=settings.langfuse_tracing_environment,
+                )
+            else:
+                langfuse_public_key = None
 
             # ---------------------------------
             # LangGraph checkpointer
@@ -181,6 +215,8 @@ def create_app(
                 repository=run_repository,
                 recursion_limit=(settings.graph_recursion_limit),
                 langfuse_enabled=(settings.langfuse_enabled),
+                langfuse_client=langfuse_client,
+                langfuse_public_key=langfuse_public_key,
             )
 
             yield
@@ -199,6 +235,9 @@ def create_app(
             if redis_client is not None:
                 await redis_client.aclose()
 
+            if langfuse_client is not None:
+                langfuse_client.shutdown()
+
             if checkpointer_context is not None:
                 await checkpointer_context.__aexit__(
                     None,
@@ -211,7 +250,7 @@ def create_app(
 
     application = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version="1.0.0",
         lifespan=lifespan,
     )
 

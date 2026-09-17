@@ -1,7 +1,6 @@
 from time import perf_counter
 from typing import Any
 
-from langfuse import get_client
 from langfuse.langchain import (
     CallbackHandler,
 )
@@ -19,11 +18,15 @@ class ResearchService:
         repository: (ResearchRunRepository | None),
         recursion_limit: int,
         langfuse_enabled: bool,
+        langfuse_client: Any | None = None,
+        langfuse_public_key: str | None = None,
     ) -> None:
         self._graph = graph
         self._repository = repository
         self._recursion_limit = recursion_limit
         self._langfuse_enabled = langfuse_enabled
+        self._langfuse_client = langfuse_client
+        self._langfuse_public_key = langfuse_public_key
 
     async def run(
         self,
@@ -98,19 +101,19 @@ class ResearchService:
             "recursion_limit": (self._recursion_limit),
         }
 
-        if not self._langfuse_enabled:
+        if not self._langfuse_enabled or self._langfuse_client is None:
             return await self._graph.ainvoke(
                 initial_state,
                 config=config,
             )
 
-        langfuse = get_client()
-
-        handler = CallbackHandler()
+        handler = CallbackHandler(
+            public_key=self._langfuse_public_key,
+        )
 
         config["callbacks"] = [handler]
 
-        with langfuse.start_as_current_observation(
+        with self._langfuse_client.start_as_current_observation(
             name="research-agent",
             as_type="agent",
             input={

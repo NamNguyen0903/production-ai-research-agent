@@ -30,3 +30,8 @@ htmlcov/
 
 # Logs
 *.log
+
+# Generated evaluation history; keep the canonical portfolio report.
+evals/reports/evaluation-*.json
+!evals/reports/latest.json
+!evals/reports/.gitkeep

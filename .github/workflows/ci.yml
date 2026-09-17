@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+
+jobs:
+  quality:
+    name: Lint, test and build
+
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+
+        env:
+          POSTGRES_DB: research_agent
+          POSTGRES_USER: research
+          POSTGRES_PASSWORD: research
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd
+          "pg_isready -U research -d research_agent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+
+        ports:
+          - 6379:6379
+
+        options: >-
+          --health-cmd
+          "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+
+    env:
+      APP_ENV: test
+
+      LLM_PROVIDER: mock
+
+      POSTGRES_URI: >-
+        postgresql://research:research@localhost:5432/research_agent?sslmode=disable
+
+      REDIS_URL: >-
+        redis://localhost:6379/0
+
+      RUN_INFRA_TESTS: "1"
+
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: "0.12.15"
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: |
+          uv sync \
+            --locked \
+            --all-extras \
+            --dev
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Infrastructure tests
+        run: |
+          RUN_INFRA_TESTS=1 \
+          uv run pytest \
+            tests/integration/test_persistence.py \
+            -q
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t production-ai-research-agent:test \
+            .

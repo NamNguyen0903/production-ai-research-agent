@@ -1,4 +1,5 @@
 import pytest
+from redis.exceptions import RedisError
 
 from app.models.evidence import Evidence
 from app.services.cache import SearchCache
@@ -29,6 +30,23 @@ class FakeRedis:
 
     async def ping(self) -> bool:
         return True
+
+
+class UnavailableRedis(FakeRedis):
+    async def get(self, key: str) -> str | None:
+        raise RedisError("unavailable")
+
+    async def set(
+        self,
+        key: str,
+        value: str,
+        *,
+        ex: int | None = None,
+    ) -> bool:
+        raise RedisError("unavailable")
+
+    async def ping(self) -> bool:
+        raise RedisError("unavailable")
 
 
 def make_evidence() -> Evidence:
@@ -172,3 +190,38 @@ async def test_cache_ping():
     )
 
     assert await cache.ping() is True
+
+
+@pytest.mark.asyncio
+async def test_cache_treats_invalid_json_as_miss():
+    redis = FakeRedis()
+
+    cache = SearchCache(
+        redis=redis,  # type: ignore[arg-type]
+        ttl_seconds=900,
+    )
+
+    key = cache._key("small language models", 4)
+    redis.storage[key] = "not-json"
+
+    assert await cache.get("small language models", 4) is None
+
+
+@pytest.mark.asyncio
+async def test_cache_failure_does_not_break_research_path():
+    redis = UnavailableRedis()
+
+    cache = SearchCache(
+        redis=redis,  # type: ignore[arg-type]
+        ttl_seconds=900,
+    )
+
+    assert await cache.get("small language models", 4) is None
+
+    await cache.set(
+        "small language models",
+        4,
+        [make_evidence()],
+    )
+
+    assert await cache.ping() is False
